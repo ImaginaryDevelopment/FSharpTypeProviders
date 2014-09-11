@@ -5,4 +5,8 @@
 open BTypeProvider.TypeProvider.Provided
 
 // Define your library scripting code here
-
+let thing = MyType()
+let thingInnerState = thing.InnerState
+let thing2 = MyType("Some other text")
+let thing2InnerState = thing2.InnerState
+;;
