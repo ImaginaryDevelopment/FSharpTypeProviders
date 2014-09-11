@@ -33,6 +33,13 @@
     <DocumentationFile>bin\Release\BTypeProvider.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.SqlServer.TransactSql.ScriptDom">
+      <HintPath>..\lib\Microsoft.SqlServer.TransactSql.ScriptDom.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.SqlServer.Types">
+      <HintPath>..\packages\Microsoft.SqlServer.Types.11.0.1\lib\net20\Microsoft.SqlServer.Types.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>True</Private>
@@ -42,8 +49,12 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
@@ -54,11 +65,41 @@
       </SubType>
     </Compile>
     <Compile Include="Library1.fs" />
+    <Compile Include="Configuration.fs">
+      <SubType>
+      </SubType>
+    </Compile>
+    <Compile Include="SqlClientExtensions.fs">
+      <SubType>
+      </SubType>
+    </Compile>
+    <Compile Include="DynamicRecord.fs">
+      <SubType>
+      </SubType>
+    </Compile>
+    <Compile Include="QuotationsFactory.fs">
+      <SubType>
+      </SubType>
+    </Compile>
+    <Compile Include="DataTable.fs">
+      <SubType>
+      </SubType>
+    </Compile>
+    <Compile Include="ProgrammabilityQuotationsFactory.fs">
+      <SubType>
+      </SubType>
+    </Compile>
+    <Compile Include="BusinessObjectProvider.fs">
+      <SubType>
+      </SubType>
+    </Compile>
     <None Include="Script.fsx" />
     <None Include="packages.config" />
     <Content Include="Sample.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="SqlServerTypes\readme.htm" />
+    <None Include="SqlServerTypes\Loader.cs" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
