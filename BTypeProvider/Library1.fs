@@ -27,6 +27,33 @@ type Node () =
     member val Id = Id() with get, set
     member val Ports = Collections.Generic.List<Port>() with get, set
 
+let private embeddedNode (node : Node) =
+    let idExpr = embeddedId node.Id
+    let portsExpr adder = 
+        <@
+            let outPorts = Collections.Generic.List<Port>()
+            (%adder) outPorts
+            outPorts
+        @>
+    let adder =
+        let portExprs =
+            Seq.map (fun port -> embeddedPort port) (node.Ports)
+            |> Seq.toList
+        let rec builder expr remaining =
+            match remaining with
+            | h::t ->
+                builder
+                    <@ fun (ports : Collections.Generic.List<Port>) ->
+                            (%expr) ports
+                            ports.Add(%h) @>
+                    t
+            | [] ->
+                expr
+        builder
+            <@ fun (ports : Collections.Generic.List<Port>) -> () @>
+            portExprs
+    <@ Node(Id = %idExpr, Ports = (%portsExpr adder)) @>
+
 type InputPort = | InputPort of Port
 type OutputPort = | OutputPort of Port
 
@@ -44,17 +71,21 @@ module NodeInstance =
 [<TypeProvider>]
 type MavnnProvider(config: TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces ()
-
-    let ns = "BTypeProvider.TypeProvider.Provided"
+    
+    let ns = 
+        let myexpr = typeof<MavnnProvider>.Namespace
+        //myexpr + 
+        "BTypeProvider.TypeProvider.Provided"
     let asm = Assembly.GetExecutingAssembly()
+
     let mavnnProvider = ProvidedTypeDefinition(asm,ns, "MavnnProvider", Some typeof<obj>)
 
     let parameters = [ProvidedStaticParameter("PathToJson", typeof<string>)]
-
+    
     do mavnnProvider.DefineStaticParameters(parameters, fun typeName args ->
         let pathToJson = args.[0] :?> string
 
-        let provider = ProvidedTypeDefinition (typeName, Some typeof<obj>, HideObjectMethods = true)
+        let provider = ProvidedTypeDefinition (asm, ns, typeName, Some typeof<obj>, HideObjectMethods = true)
         let nodes = 
             System.Diagnostics.Trace.WriteLine(sprintf "Trace: Working from %s" Environment.CurrentDirectory)
             System.Diagnostics.Debug.WriteLine(sprintf "Debug: Working from %s" Environment.CurrentDirectory)
@@ -73,23 +104,28 @@ type MavnnProvider(config: TypeProviderConfig) as this =
             |> Map.ofSeq
 
         let GetPort id = ports.[id]
+
         let addInputPort (inputs: ProvidedTypeDefinition) (port : Port) =
             let port = ProvidedProperty (
                         port.Id.Name,
                         typeof<InputPort>,
                         GetterCode = fun args -> 
                             let id = port.Id.UniqueId.ToString()
-                            <@@ GetPort id |> InputPort @@>)
+                            let expr = embeddedPort <| GetPort id
+                            <@@ %expr |> InputPort @@>)
             inputs.AddMember port
+
         let addOutputPort (outputs : ProvidedTypeDefinition) (port : Port) =
             let port = ProvidedProperty(
                         port.Id.Name,
                         typeof<OutputPort>,
                         GetterCode = fun args -> 
                             let id = port.Id.UniqueId.ToString()
-                            <@@ GetPort id |> OutputPort @@>
+                            let expr = embeddedPort <| GetPort id
+                            <@@ %expr |> OutputPort @@>
             )
             outputs.AddMember port
+
         let addPorts inputs outputs (portList: Port seq) =
             portList
             |> Seq.iter (fun port ->
@@ -100,7 +136,19 @@ type MavnnProvider(config: TypeProviderConfig) as this =
                 )
         
         let createNodeType id (node : Node) =
-            let nodeType = ProvidedTypeDefinition(asm, ns, node.Id.Name, Some typeof<nodeInstance>)
+            let nodeType = ProvidedTypeDefinition(node.Id.Name, Some typeof<nodeInstance>)
+
+            let ctor = ProvidedConstructor (
+                        [
+                            ProvidedParameter("Name", typeof<string>)
+                            ProvidedParameter("UniqueId", typeof<Guid>)
+                            ProvidedParameter("Config", typeof<string>)
+                        ],
+                        InvokeCode = 
+                            fun [name;unique;config] ->
+                                let nodeExpr = embeddedNode <| GetNode id
+                                <@@ NodeInstance.create (%nodeExpr) (%%name:string) (%%unique:Guid) (%%config:string) @@>)
+            nodeType.AddMember ctor
 
             let addInputOutput () = 
             
@@ -126,12 +174,16 @@ type MavnnProvider(config: TypeProviderConfig) as this =
             nodeType.AddMembersDelayed addInputOutput
             provider.AddMember nodeType
 
-        let createTypes () = 
+        let createTypes pathToJson = 
             nodes |> Map.map createNodeType |> Map.toList |> List.map (fun (k,v) -> v)
-        createTypes() |> ignore
+        createTypes pathToJson |> ignore
         provider
         )
     do
         this.AddNamespace(ns, [mavnnProvider])
+
+    // apparently the module is not part of a type's namespace (BTypeProvider is returned from this property)
+    static member val Namespace = typeof<MavnnProvider>.Namespace
+
 [<assembly:TypeProviderAssembly>]
 do ()
