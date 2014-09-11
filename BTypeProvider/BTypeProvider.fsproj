@@ -49,6 +49,10 @@
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
     <Compile Include="DebugProvidedTypes.fs" />
+    <Compile Include="SimpleProvider.fs">
+      <SubType>
+      </SubType>
+    </Compile>
     <Compile Include="Library1.fs" />
     <None Include="Script.fsx" />
     <None Include="packages.config" />

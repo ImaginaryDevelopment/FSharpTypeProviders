@@ -1,8 +1,13 @@
 ﻿// Learn more about F# at http://fsharp.net. See the 'F# Tutorial' project
 // for more guidance on F# programming.
+#r "Newtonsoft.Json.dll"
 #load "ProvidedTypes.fs"
+#load "SimpleProvider.fs"
 #load "Library1.fs"
-open BTypeProvider.TypeProvider.Provided
+open System
+
+open BTypeProvider.SimpleObjectProvider.Provided
+open BTypeProvider.TypeProvider.JsonProvided
 
 // Define your library scripting code here
 let thing = MyType()
