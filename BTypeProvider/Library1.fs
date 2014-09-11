@@ -5,44 +5,61 @@ open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open Newtonsoft.Json
 
-type private Id() = 
+type Id () =
     member val UniqueId = Guid() with get, set
     member val Name = "" with get, set
-type private Port() = 
+
+type Port () =
     member val Id = Id() with get, set
     member val Type = "" with get, set
-type private Node () = 
-    member val Id = Id() with get,set
-    member val Ports = Collections.Generic.List<Port>() with get,set
+
+type Node () =
+    member val Id = Id() with get, set
+    member val Ports = Collections.Generic.List<Port>() with get, set
+
+type InputPort = | InputPort of Port
+type OutputPort = | OutputPort of Port
+
+type nodeInstance =
+    {
+        Node : Node
+        InstanceId : Id
+        Config : string
+    }
+
+module NodeInstance =
+    let create node name guid config =
+        { Node = node; InstanceId = Id(Name = name, UniqueId = guid); Config = config }    
+
 let private nodes = 
     System.Diagnostics.Trace.WriteLine(sprintf "Trace: Working from %s" Environment.CurrentDirectory)
     System.Diagnostics.Debug.WriteLine(sprintf "Debug: Working from %s" Environment.CurrentDirectory)
     printfn "Printfn %s" Environment.CurrentDirectory
-    JsonConvert.DeserializeObject<seq<Node>>(IO.File.ReadAllText("Sample.json"))
-    |> Seq.map (fun n -> n.Id.UniqueId.ToString(), n)
-    |> Map.ofSeq
-let private GetNode id = nodes.[id]
-let private ports = 
+    JsonConvert.DeserializeObject<seq<Node>>(IO.File.ReadAllText(@"C:\projects\Mavnn.Blog.TypeProvider\Mavnn.Blog.TypeProvider\sample.json"))
+                    |> Seq.map (fun n -> n.Id.UniqueId.ToString(), n)
+                    |> Map.ofSeq
+
+let GetNode id =
+    nodes.[id]
+
+
+let private ports =
     nodes
     |> Map.toSeq
     |> Seq.map (fun (_, node) -> node.Ports)
     |> Seq.concat
     |> Seq.map (fun p -> p.Id.UniqueId.ToString(), p)
     |> Map.ofSeq
-let private GetPort id = ports.[id]
 
-type private nodeInstance = { Node : Node; InstanceId : Id; Config : string}
-module private NodeInstance = 
-    let create node name guid config = 
-        {Node = node; InstanceId = Id(Name = name, UniqueId = guid); Config = config}
-type private InputPort = | InputPort of Port
-type private OutputPort = | OutputPort of Port
+let GetPort id =
+    ports.[id]
+
 
 [<TypeProvider>]
 type JsonProvider(config: TypeProviderConfig) as this = 
     inherit TypeProviderForNamespaces ()
 
-    let ns = "BTypeProvider.TypeProvider.Provided"
+    let ns = "BTypeProvider.TypeProvider.JsonProvided"
     let asm = Assembly.GetExecutingAssembly()
 
     let addInputPort (inputs: ProvidedTypeDefinition) (port : Port) =
@@ -80,6 +97,7 @@ type JsonProvider(config: TypeProviderConfig) as this =
                         ],
                         InvokeCode = fun [name;unique;config] -> <@@ NodeInstance.create (GetNode id) (%%name:string) (%%unique:Guid) (%%config:string) @@>)
         nodeType.AddMember ctor
+
         let outputs = ProvidedTypeDefinition("Outputs", Some typeof<obj>)
         let outputCtor = ProvidedConstructor([], InvokeCode = fun args -> <@@ obj() @@>)
         outputs.AddMember outputCtor
@@ -103,6 +121,7 @@ type JsonProvider(config: TypeProviderConfig) as this =
         nodes |> Map.map createNodeType |> Map.toList |> List.map (fun (k,v) -> v)
     do
         this.AddNamespace(ns, createTypes())
+
 [<TypeProvider>]
 type BusinessObjectTypeProvider (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces ()
