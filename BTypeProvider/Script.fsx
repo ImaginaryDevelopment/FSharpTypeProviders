@@ -2,7 +2,7 @@
 // for more guidance on F# programming.
 #load "ProvidedTypes.fs"
 #load "Library1.fs"
-open Mavnn.Blog.TypeProvider.Provided
+open BTypeProvider.TypeProvider.Provided
 
 // Define your library scripting code here
 

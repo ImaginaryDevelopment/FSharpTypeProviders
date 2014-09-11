@@ -1,13 +1,13 @@
-﻿module Mavnn.Blog.TypeProvider
+﻿module BTypeProvider.TypeProvider
 
 open ProviderImplementation.ProvidedTypes
 open Microsoft.FSharp.Core.CompilerServices
 open System.Reflection
 
 [<TypeProvider>]
-type MavnnProvider (config : TypeProviderConfig) as this =
+type BusinessObjectTypeProvider (config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces ()
-    let ns = "Mavnn.Blog.TypeProvider.Provided"
+    let ns = "BTypeProvider.TypeProvider.Provided"
     let asm = Assembly.GetExecutingAssembly()
 
     let createTypes () =
